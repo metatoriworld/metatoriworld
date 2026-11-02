@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>METATORI WORLD · Firebase 연결 테스트</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(ellipse at top,#172447,#080c19 70%);color:#f3f5ff;font-family:system-ui,'Noto Sans KR',sans-serif}.panel{width:min(92vw,520px);border:1px solid #425477;border-radius:24px;padding:30px;text-align:center;background:#131b31}.star{font-size:40px}h1{letter-spacing:2px;font-size:23px}p{color:#aebdd7}.value{margin:24px 0;padding:25px;border-radius:16px;background:#222f50;font-size:24px;font-weight:700;overflow-wrap:anywhere}button{border:0;border-radius:10px;padding:12px 22px;background:#8cbbff;color:#07142c;font-weight:700;cursor:pointer}.status{margin:15px 0;font-size:14px}small{display:block;margin-top:22px;color:#9aa9c2}
+</style>
+</head>
+<body><main class="panel"><div class="star">✦</div><h1>METATORI WORLD</h1><p>Firebase 실시간 데이터 연결 테스트</p><div class="value" id="value">연결 중...</div><div class="status" id="status" role="status">Firebase 데이터 조회 중</div><button id="refresh">다시 조회</button><small>공개 테스트 경로 /test · 개인 정보는 저장하지 마세요.</small></main>
+<script>
+const endpoint='https://metatoriworld-17096-default-rtdb.asia-southeast1.firebasedatabase.app/test.json';
+const value=document.getElementById('value'),status=document.getElementById('status');
+async function load(){
+ value.textContent='연결 중...';status.textContent='Firebase 데이터 조회 중';
+ try{
+  const response=await fetch(endpoint,{cache:'no-store'});
+  if(!response.ok)throw new Error(response.status===401?'접근 거부: Firebase 규칙에서 test 읽기를 허용해야 합니다.':'HTTP 오류 '+response.status);
+  const result=await response.json();
+  value.textContent=result===null?'저장된 test 값이 없습니다.':typeof result==='string'?result:JSON.stringify(result);
+  status.textContent='✓ Firebase 연결 성공';
+ }catch(error){value.textContent='연결 실패';status.textContent=error.message||'네트워크 또는 보안 규칙을 확인하세요.'}
+}
+document.getElementById('refresh').addEventListener('click',load);
+load();
+</script></body></html>
