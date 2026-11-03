@@ -32,4 +32,49 @@ async function loadWallet(){
  }catch(e){status.textContent="조회 실패: "+e.message}
 }
 if(page!=="home"){document.getElementById("load").onclick=loadWallet;document.getElementById("wallet-input").addEventListener("keydown",e=>{if(e.key==="Enter")loadWallet()});if(currentWallet)loadWallet()}
+
+/* Dashboard: Firebase public attendance and member directory */
+const todayKST = new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+async function getPublicData(path){
+ const r=await fetch(base+"/dreamWallet/"+path+".json",{cache:"no-store"});
+ if(!r.ok) throw new Error("Firebase HTTP "+r.status);
+ return await r.json();
+}
+function memberLink(wallet,kind){
+ const w=encodeURIComponent(wallet);
+ return "./"+kind+".html?wallet="+w;
+}
+function publicRow(nickname,wallet,detail){
+ return '<a class="row" style="padding:15px 3px;border-bottom:1px solid var(--line)" href="'+memberLink(wallet,"community")+'"><span><b>'+safe(nickname)+'</b><br><span class="small">'+safe(detail||wallet)+'</span></span><span class="pill">내출석 보기</span></a>';
+}
+if(page==="home" || page==="community"){
+ const section=document.createElement("section");section.className="panel";
+ section.innerHTML='<div class="row"><h2>📅 오늘 출석자</h2><span class="pill" id="attendance-count">조회 중</span></div><p class="sub" id="attendance-day">'+safe(todayKST)+' · 카카오톡 /출석 기록</p><div id="attendance-list" class="placeholder">Firebase 출석 정보를 불러오는 중...</div>';
+ if(page==="home")main.appendChild(section);
+ else main.querySelector(".columns > div:last-child").appendChild(section);
+ (async()=>{
+  try{
+   const records=await getPublicData("attendance/"+todayKST);
+   const list=Object.values(records||{}).filter(v=>v&&v.wallet).sort((a,b)=>String(a.checkedAt||"").localeCompare(String(b.checkedAt||"")));
+   document.getElementById("attendance-count").textContent=list.length+"명 출석";
+   document.getElementById("attendance-list").className="";
+   document.getElementById("attendance-list").innerHTML=list.length?list.map((v,i)=>publicRow(v.nickname||"회원",v.wallet,(i+1)+"번째 출석 · "+(v.checkedAt||"").slice(11,16))).join(""):'아직 오늘 출석한 회원이 없습니다.';
+  }catch(err){
+   document.getElementById("attendance-list").textContent="출석 기록을 불러오지 못했습니다: "+err.message;
+  }
+ })();
+}
+if(page==="home"){
+ const sec=document.createElement("section");sec.className="panel";
+ sec.innerHTML='<div class="row"><h2>👥 가입 회원</h2><span class="pill" id="member-count">조회 중</span></div><div id="member-list" class="placeholder">회원 목록을 불러오는 중...</div>';main.appendChild(sec);
+ (async()=>{
+  try{
+   const idx=await getPublicData("memberIndex");
+   const members=Object.keys(idx||{}).sort();
+   document.getElementById("member-count").textContent=members.length+"명";
+   document.getElementById("member-list").className="";
+   document.getElementById("member-list").innerHTML=members.length?members.map(w=>publicRow(idx[w],w,w)).join(""):"아직 가입한 회원이 없습니다.";
+  }catch(err){document.getElementById("member-list").textContent="회원 목록을 불러오지 못했습니다: "+err.message}
+ })();
+}
 </script></body></html>
