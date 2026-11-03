@@ -32,4 +32,50 @@ async function loadWallet(){
  }catch(e){status.textContent="조회 실패: "+e.message}
 }
 if(page!=="home"){document.getElementById("load").onclick=loadWallet;document.getElementById("wallet-input").addEventListener("keydown",e=>{if(e.key==="Enter")loadWallet()});if(currentWallet)loadWallet()}
+
+/* Live Firebase member/attendance dashboard */
+const kstDate = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+async function readDB(path){
+ const res=await fetch(base+"/dreamWallet/"+path+".json?ts="+Date.now(),{cache:"no-store"});
+ if(!res.ok)throw Error("HTTP "+res.status+" · Firebase 읽기 권한을 확인하세요");
+ return await res.json();
+}
+function memberEntry(n,w,detail){
+ const url="./community.html?wallet="+encodeURIComponent(w);
+ return '<a href="'+url+'" class="row" style="padding:14px 0;border-bottom:1px solid var(--line);text-decoration:none"><span><b>'+safe(n)+'</b><br><span class="small">'+safe(detail||w)+'</span></span><span class="pill">기록 보기</span></a>';
+}
+const dir=document.createElement("section");dir.className="panel";
+dir.innerHTML='<div class="row"><h2>👥 전체 가입 회원</h2><span class="pill" id="live-members-count">불러오는 중</span></div><div id="live-members">Firebase 회원 정보 확인 중...</div>';
+main.appendChild(dir);
+const attendancePanel=document.createElement("section");attendancePanel.className="panel";
+attendancePanel.innerHTML='<div class="row"><h2>📅 오늘 출석자</h2><span class="pill" id="live-attendance-count">불러오는 중</span></div><p class="sub">'+safe(kstDate)+' 기준</p><div id="live-attendance">Firebase 출석 정보 확인 중...</div>';
+main.appendChild(attendancePanel);
+(async()=>{
+ try{
+  const raw=await readDB("memberIndex");
+  let pairs=[];
+  if(raw&&typeof raw==="object"){
+   Object.entries(raw).forEach(([key,val])=>{
+    if(typeof val==="string"){
+     const wallet=/^MTW-/i.test(key)?key:val;
+     const nickname=/^MTW-/i.test(key)?val:key;
+     if(/^MTW-/i.test(wallet))pairs.push({wallet,nickname});
+    }else if(val&&typeof val==="object"){
+     const wallet=val.wallet||val.address||key;
+     if(/^MTW-/i.test(wallet))pairs.push({wallet,nickname:val.nickname||val.name||key});
+    }
+   });
+  }
+  pairs.sort((a,b)=>a.nickname.localeCompare(b.nickname,"ko"));
+  document.getElementById("live-members-count").textContent=pairs.length+"명";
+  document.getElementById("live-members").innerHTML=pairs.length?pairs.map(m=>memberEntry(m.nickname,m.wallet,m.wallet)).join(""):'저장된 회원 목록이 비어 있습니다. Firebase memberIndex 데이터를 확인하세요.';
+ }catch(e){document.getElementById("live-members-count").textContent="조회 실패";document.getElementById("live-members").textContent="회원 데이터 오류: "+e.message}
+ try{
+  const raw=await readDB("attendance/"+kstDate);
+  let people=Object.entries(raw||{}).map(([key,v])=>({wallet:(v&&v.wallet)||key,nickname:(v&&v.nickname)||"회원",checkedAt:(v&&v.checkedAt)||""})).filter(x=>/^MTW-/i.test(x.wallet));
+  people.sort((a,b)=>a.checkedAt.localeCompare(b.checkedAt));
+  document.getElementById("live-attendance-count").textContent=people.length+"명";
+  document.getElementById("live-attendance").innerHTML=people.length?people.map(p=>memberEntry(p.nickname,p.wallet,p.checkedAt||p.wallet)).join(""):"오늘 출석 기록이 없습니다.";
+ }catch(e){document.getElementById("live-attendance-count").textContent="조회 실패";document.getElementById("live-attendance").textContent="출석 데이터 오류: "+e.message}
+})();
 </script></body></html>
