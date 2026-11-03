@@ -45,6 +45,7 @@ function memberEntry(n,w,detail){
  const url="./community.html?wallet="+encodeURIComponent(w);
  return '<a href="'+url+'" class="row" style="padding:14px 0;border-bottom:1px solid var(--line);text-decoration:none"><span><b>'+safe(n)+'</b><br><span class="small">'+safe(detail||w)+'</span></span><span class="pill">기록 보기</span></a>';
 }
+if(!queryWallet){
 const dir=document.createElement("section");dir.className="panel";
 dir.innerHTML='<div class="row"><h2>👥 전체 가입 회원</h2><span class="pill" id="live-members-count">불러오는 중</span></div><div id="live-members">Firebase 회원 정보 확인 중...</div>';
 main.appendChild(dir);
@@ -79,4 +80,9 @@ main.appendChild(attendancePanel);
   document.getElementById("live-attendance").innerHTML=people.length?people.map(p=>memberEntry(p.nickname,p.wallet,p.checkedAt||p.wallet)).join(""):"오늘 출석 기록이 없습니다.";
  }catch(e){document.getElementById("live-attendance-count").textContent="조회 실패";document.getElementById("live-attendance").textContent="출석 데이터 오류: "+e.message}
 })();
+
+} else {
+  const form=document.getElementById("wallet-input");
+  if(form){const panel=form.closest(".panel");if(panel)panel.style.display="none";}
+}
 </script></body></html>
